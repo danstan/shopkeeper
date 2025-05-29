@@ -58,10 +58,40 @@ namespace ShopkeeperRPG.Controllers
             }
         }
 
+        // Method to advance player time
+        private static void AdvancePlayerTime(Player player, int hoursToAdvance)
+        {
+            if (player == null)
+            {
+                return;
+            }
+
+            player.CurrentHour += hoursToAdvance;
+
+            if (player.CurrentHour >= 24)
+            {
+                int daysPassed = player.CurrentHour / 24;
+                player.CurrentDay += daysPassed;
+                player.CurrentHour %= 24; 
+
+                // End of Day Logic
+                for (int i = 0; i < daysPassed; i++)
+                {
+                    if (!player.TookLongRestToday)
+                    {
+                        player.ExhaustionLevel = Math.Min(player.ExhaustionLevel + 1, 6); // Cap at 6
+                    }
+                    player.TookLongRestToday = false; // Reset for the new day that just started
+                }
+                
+                RefreshMarketItems(); // Market refreshes daily
+                // Future: Other daily events, NPC schedules, etc.
+            }
+        }
+
         // Request models
         public record CreatePlayerRequest(string Name);
         public record BuyItemRequest(string ItemName);
-        // Response model for RunShopStandardRate
         public record RunShopStandardResponse(string Message, Player? UpdatedPlayer);
 
 
@@ -106,12 +136,19 @@ namespace ShopkeeperRPG.Controllers
                 Description = itemToAddDetails.Description, 
                 Price = itemToAddDetails.Price 
             });
+
+            AdvancePlayerTime(player, 0); 
             return Ok(player); 
         }
 
         [HttpGet("marketitems")]
         public IActionResult GetMarketItems()
         {
+            var player = _players.FirstOrDefault();
+            if (player != null)
+            {
+                AdvancePlayerTime(player, 1); 
+            }
             return Ok(_marketItems);
         }
 
@@ -147,7 +184,8 @@ namespace ShopkeeperRPG.Controllers
                 Description = marketItem.Description, 
                 Price = marketItem.Price 
             });
-
+            
+            AdvancePlayerTime(player, 0); 
             return Ok(player);
         }
 
@@ -157,27 +195,46 @@ namespace ShopkeeperRPG.Controllers
             var player = _players.FirstOrDefault();
             if (player == null)
             {
-                // Using NotFound for consistency with other player-not-found scenarios
                 return NotFound(new RunShopStandardResponse("Player not found. Please create a player first.", null));
             }
 
             if (player.Inventory == null || !player.Inventory.Any())
             {
+                AdvancePlayerTime(player, 2); 
                 return Ok(new RunShopStandardResponse("Your inventory is empty! Nothing to sell.", player));
             }
 
-            // Randomly pick an item from player.Inventory.
-            // _random is the static Random instance from the class.
             int itemIndex = _random.Next(player.Inventory.Count);
             Item itemToSell = player.Inventory[itemIndex];
-
-            int salePrice = itemToSell.Price; // For now, sale price is item's base price
+            int salePrice = itemToSell.Price; 
 
             player.Gold += salePrice;
-            player.Inventory.RemoveAt(itemIndex); // Remove by index is safest
+            player.Inventory.RemoveAt(itemIndex); 
 
+            AdvancePlayerTime(player, 2); 
             string message = $"Sold {itemToSell.Name} for {salePrice} gold.";
             return Ok(new RunShopStandardResponse(message, player));
+        }
+
+        [HttpPost("longrest")]
+        public IActionResult TakeLongRest()
+        {
+            var player = _players.FirstOrDefault();
+            if (player == null)
+            {
+                return NotFound("Player not found. Please create a player first."); // Consistent with other player checks
+            }
+
+            // For this version, we assume the player can always attempt a long rest.
+            // No food/drink check implemented.
+
+            player.TookLongRestToday = true;
+            AdvancePlayerTime(player, 8); // Advance time by 8 hours
+            player.ExhaustionLevel = 0; // Reset exhaustion
+
+            // TODO: Implement HP and Hit Dice recovery as per D&D long rest rules.
+
+            return Ok(player);
         }
     }
 }

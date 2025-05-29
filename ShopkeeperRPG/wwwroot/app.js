@@ -3,10 +3,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const createCharacterButton = document.getElementById('createCharacterButton');
     const getStarterItemButton = document.getElementById('getStarterItemButton');
     const visitMarketButton = document.getElementById('visitMarketButton');
-    const runShopStandardButton = document.getElementById('runShopStandardButton'); // Get reference
+    const runShopStandardButton = document.getElementById('runShopStandardButton'); 
+    const longRestButton = document.getElementById('longRestButton'); // Get reference
     const characterDisplay = document.getElementById('characterDisplay');
     const marketDisplay = document.getElementById('marketDisplay');
-    const shopMessageDisplay = document.getElementById('shopMessageDisplay'); // Get reference
+    const shopMessageDisplay = document.getElementById('shopMessageDisplay'); 
 
     // Helper function to display character details
     function displayCharacter(character) {
@@ -53,6 +54,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         inventoryElement.innerHTML = inventoryHTML;
         characterDisplay.appendChild(inventoryElement);
+
+        const dayElement = document.createElement('p');
+        dayElement.textContent = `Day: ${character.currentDay}`;
+        characterDisplay.appendChild(dayElement);
+
+        const hourElement = document.createElement('p');
+        hourElement.textContent = `Hour: ${character.currentHour}`;
+        characterDisplay.appendChild(hourElement);
+
+        const exhaustionElement = document.createElement('p');
+        exhaustionElement.textContent = `Exhaustion: ${character.exhaustionLevel}`;
+        characterDisplay.appendChild(exhaustionElement);
     }
 
     // Helper function to disable all action buttons
@@ -60,6 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if(getStarterItemButton) getStarterItemButton.disabled = true;
         if(visitMarketButton) visitMarketButton.disabled = true;
         if(runShopStandardButton) runShopStandardButton.disabled = true;
+        if(longRestButton) longRestButton.disabled = true; // Add long rest button
     }
 
     // Helper function to enable action buttons (typically after character creation)
@@ -67,6 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if(getStarterItemButton) getStarterItemButton.disabled = false;
         if(visitMarketButton) visitMarketButton.disabled = false;
         if(runShopStandardButton) runShopStandardButton.disabled = false;
+        if(longRestButton) longRestButton.disabled = false; // Add long rest button
     }
     
     disableActionButtons(); // Disable buttons on page load
@@ -78,8 +93,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert('Please enter a character name.');
                 return;
             }
-            shopMessageDisplay.innerHTML = ''; // Clear shop messages
-            marketDisplay.innerHTML = ''; // Clear market display
+            shopMessageDisplay.innerHTML = ''; 
+            marketDisplay.innerHTML = ''; 
             try {
                 const response = await fetch('/api/player/create', {
                     method: 'POST',
@@ -117,7 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (getStarterItemButton) {
         getStarterItemButton.addEventListener('click', async () => {
-            shopMessageDisplay.innerHTML = ''; // Clear shop messages
+            shopMessageDisplay.innerHTML = ''; 
             try {
                 const response = await fetch('/api/player/getstarteritem', { method: 'POST' });
                 if (response.ok) {
@@ -139,7 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (visitMarketButton) {
         visitMarketButton.addEventListener('click', async () => {
-            shopMessageDisplay.innerHTML = ''; // Clear shop messages
+            shopMessageDisplay.innerHTML = ''; 
             try {
                 const response = await fetch('/api/player/marketitems');
                 if (response.ok) {
@@ -206,7 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     alert('Could not determine which item to buy.');
                     return;
                 }
-                shopMessageDisplay.innerHTML = ''; // Clear shop messages
+                shopMessageDisplay.innerHTML = ''; 
                 try {
                     const response = await fetch('/api/player/buyitem', {
                         method: 'POST',
@@ -239,19 +254,17 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error('#marketDisplay not found for event delegation.');
     }
 
-    // Event listener for the "Run Shop (Standard Rate)" button
     if (runShopStandardButton) {
         runShopStandardButton.addEventListener('click', async () => {
-            shopMessageDisplay.innerHTML = ''; // Clear previous shop messages
-            marketDisplay.innerHTML = ''; // Clear market display
+            shopMessageDisplay.innerHTML = ''; 
+            marketDisplay.innerHTML = ''; 
 
             try {
                 const response = await fetch('/api/player/runshopstandard', {
                     method: 'POST',
-                    // No body needed for this request
                 });
 
-                const responseData = await response.json(); // Try to parse JSON regardless of response.ok
+                const responseData = await response.json(); 
 
                 if (response.ok) {
                     shopMessageDisplay.textContent = responseData.message;
@@ -259,11 +272,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         displayCharacter(responseData.updatedPlayer);
                     }
                 } else {
-                    // Handle errors (e.g., player not found, etc.)
                     const errorMessage = responseData.message || responseData.title || (typeof responseData === 'string' ? responseData : "Error running shop.");
                     console.error('Error running shop:', response.status, errorMessage);
                     shopMessageDisplay.innerHTML = `<p style="color: red;">${errorMessage}</p>`;
-                     // If player data was returned with the error (e.g. for "inventory empty" message), still update display
                     if (responseData.updatedPlayer) {
                         displayCharacter(responseData.updatedPlayer);
                     }
@@ -275,5 +286,35 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     } else {
         console.error('#runShopStandardButton not found.');
+    }
+
+    // Event listener for the "Take Long Rest" button
+    if (longRestButton) {
+        longRestButton.addEventListener('click', async () => {
+            shopMessageDisplay.innerHTML = ''; // Clear shop messages
+            marketDisplay.innerHTML = '';    // Clear market display
+
+            try {
+                const response = await fetch('/api/player/longrest', {
+                    method: 'POST',
+                    // No body needed
+                });
+
+                if (response.ok) {
+                    const updatedPlayer = await response.json();
+                    displayCharacter(updatedPlayer);
+                    shopMessageDisplay.textContent = "You feel rested and rejuvenated."; // Optional success message
+                } else {
+                    const errorText = await response.text();
+                    console.error('Error taking long rest:', response.status, errorText);
+                    alert(`Could not take long rest: ${errorText || response.statusText}`);
+                }
+            } catch (error) {
+                console.error('Failed to send long rest request:', error);
+                alert('Failed to send request for long rest. See console for details.');
+            }
+        });
+    } else {
+        console.error('#longRestButton not found.');
     }
 });
