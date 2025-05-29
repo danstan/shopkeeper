@@ -4,7 +4,7 @@ namespace ShopkeeperRPG.Models
 {
     public class Player
     {
-        public string Name { get; set; }
+        public required string Name { get; set; }
         public int Strength { get; set; }
         public int Dexterity { get; set; }
         public int Constitution { get; set; }
