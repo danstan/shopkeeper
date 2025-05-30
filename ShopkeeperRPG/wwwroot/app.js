@@ -6,6 +6,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const runShopStandardButton = document.getElementById('runShopStandardButton');
     const longRestButton = document.getElementById('longRestButton');
     const runShopBarterButton = document.getElementById('runShopBarterButton');
+    const testDamageButton = document.getElementById('testDamageButton'); // New button
+    const testHealButton = document.getElementById('testHealButton');   // New button
     const characterDisplay = document.getElementById('characterDisplay');
     const marketDisplay = document.getElementById('marketDisplay');
     const shopMessageDisplay = document.getElementById('shopMessageDisplay');
@@ -17,6 +19,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const nameElement = document.createElement('p');
         nameElement.textContent = `Name: ${character.name}`;
         characterDisplay.appendChild(nameElement);
+
+        const hpElement = document.createElement('p');
+        hpElement.textContent = `HP: ${character.currentHP} / ${character.maxHP}`;
+        characterDisplay.appendChild(hpElement);
+
         const strengthElement = document.createElement('p');
         strengthElement.textContent = `Strength: ${character.strength}`;
         characterDisplay.appendChild(strengthElement);
@@ -64,6 +71,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if(runShopStandardButton) runShopStandardButton.disabled = true;
         if(longRestButton) longRestButton.disabled = true;
         if(runShopBarterButton) runShopBarterButton.disabled = true;
+        if(testDamageButton) testDamageButton.disabled = true; // Add test button
+        if(testHealButton) testHealButton.disabled = true;   // Add test button
     }
 
     function enableActionButtons() {
@@ -72,6 +81,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if(runShopStandardButton) runShopStandardButton.disabled = false;
         if(longRestButton) longRestButton.disabled = false;
         if(runShopBarterButton) runShopBarterButton.disabled = false;
+        if(testDamageButton) testDamageButton.disabled = false; // Add test button
+        if(testHealButton) testHealButton.disabled = false;   // Add test button
     }
 
     disableActionButtons();
@@ -83,36 +94,23 @@ document.addEventListener('DOMContentLoaded', () => {
             requestBody.counterAmount = parseInt(counterAmount, 10);
             if (isNaN(requestBody.counterAmount) || requestBody.counterAmount <= 0) {
                 barterUIDisplay.innerHTML = '<p style="color: red;">Invalid counter amount. Please enter a positive number.</p>';
-                // Optionally, re-render the previous barter state here if you stored it or re-fetch initiate data.
-                // For now, just showing an error. The barter UI will be cleared by the next successful initiate.
                 return;
             }
         }
-
         try {
             const response = await fetch('/api/player/barter/respond', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(requestBody)
             });
-
             const responseData = await response.json();
-
             if (response.ok) {
                 barterUIDisplay.innerHTML = `<p>${responseData.message}</p>`;
-                if (responseData.updatedPlayer) {
-                    displayCharacter(responseData.updatedPlayer);
-                }
-                // If barterEnded is true (which it is in the current backend logic for all responses),
-                // the barter UI is effectively cleared by displaying the message.
-                // If the backend were to support multiple turns, we'd update the UI here
-                // with new NPC offer or options based on responseData.npcResponseAction and responseData.newNpcOffer.
+                if (responseData.updatedPlayer) { displayCharacter(responseData.updatedPlayer); }
             } else {
                 const errorMsg = responseData.message || responseData.title || 'An unknown error occurred during barter response.';
                 barterUIDisplay.innerHTML = `<p style="color: red;">Barter response failed: ${errorMsg}</p>`;
-                if (responseData.updatedPlayer) { // Still update player if data is sent with error
-                    displayCharacter(responseData.updatedPlayer);
-                }
+                if (responseData.updatedPlayer) { displayCharacter(responseData.updatedPlayer); }
             }
         } catch (error) {
             console.error('Error in handleBarterAction:', error);
@@ -120,17 +118,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-
     if (createCharacterButton) {
         createCharacterButton.addEventListener('click', async () => {
             const playerNameValue = playerNameInput.value;
-            if (!playerNameValue.trim()) {
-                alert('Please enter a character name.');
-                return;
-            }
-            shopMessageDisplay.innerHTML = '';
-            marketDisplay.innerHTML = '';
-            barterUIDisplay.innerHTML = '';
+            if (!playerNameValue.trim()) { alert('Please enter a character name.'); return; }
+            shopMessageDisplay.innerHTML = ''; marketDisplay.innerHTML = ''; barterUIDisplay.innerHTML = '';
             try {
                 const response = await fetch('/api/player/create', {
                     method: 'POST',
@@ -146,9 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     try {
                         const errorData = await response.json();
                         errorMsg = errorData.title || errorData.message || (typeof errorData === 'string' ? errorData : errorMsg);
-                        if (errorData.errors) {
-                           for (const key in errorData.errors) { errorMsg += `\n${key}: ${errorData.errors[key].join(', ')}`; }
-                        }
+                        if (errorData.errors) { for (const key in errorData.errors) { errorMsg += `\n${key}: ${errorData.errors[key].join(', ')}`; } }
                     } catch (e) { /* Ignore */ }
                     console.error('Error creating character:', response.status, errorMsg);
                     characterDisplay.innerHTML = `<p style="color: red;">${errorMsg.replace(/\n/g, '<br>')}</p>`;
@@ -164,35 +154,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (getStarterItemButton) {
         getStarterItemButton.addEventListener('click', async () => {
-            shopMessageDisplay.innerHTML = '';
-            barterUIDisplay.innerHTML = '';
+            shopMessageDisplay.innerHTML = ''; barterUIDisplay.innerHTML = '';
             try {
                 const response = await fetch('/api/player/getstarteritem', { method: 'POST' });
                 if (response.ok) {
                     const updatedPlayer = await response.json();
                     displayCharacter(updatedPlayer);
                 } else {
-                    const errorText = await response.text();
-                    alert(`Could not get starter item: ${errorText || response.statusText}`);
+                    const errorText = await response.text(); alert(`Could not get starter item: ${errorText || response.statusText}`);
                 }
-            } catch (error) {
-                alert('Failed to send request for starter item. See console for details.');
-            }
+            } catch (error) { alert('Failed to send request for starter item. See console for details.'); }
         });
     }
 
     if (visitMarketButton) {
         visitMarketButton.addEventListener('click', async () => {
-            shopMessageDisplay.innerHTML = '';
-            barterUIDisplay.innerHTML = '';
+            shopMessageDisplay.innerHTML = ''; barterUIDisplay.innerHTML = '';
             try {
                 const response = await fetch('/api/player/marketitems');
                 if (response.ok) {
                     const marketItems = await response.json();
                     marketDisplay.innerHTML = '';
-                    const marketHeading = document.createElement('h3');
-                    marketHeading.textContent = 'Market';
-                    marketDisplay.appendChild(marketHeading);
+                    const marketHeading = document.createElement('h3'); marketHeading.textContent = 'Market'; marketDisplay.appendChild(marketHeading);
                     if (marketItems && marketItems.length > 0) {
                         marketItems.forEach(item => {
                             const itemDiv = document.createElement('div');
@@ -207,12 +190,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         marketDisplay.appendChild(document.createElement('p')).textContent = 'The market is empty today.';
                     }
                 } else {
-                    const errorText = await response.text();
-                    marketDisplay.innerHTML = `<p style="color: red;">Error fetching market items: ${errorText || response.statusText}</p>`;
+                    const errorText = await response.text(); marketDisplay.innerHTML = `<p style="color: red;">Error fetching market items: ${errorText || response.statusText}</p>`;
                 }
-            } catch (error) {
-                marketDisplay.innerHTML = '<p style="color: red;">Failed to fetch market items. See console for details.</p>';
-            }
+            } catch (error) { marketDisplay.innerHTML = '<p style="color: red;">Failed to fetch market items. See console for details.</p>'; }
         });
     }
 
@@ -222,8 +202,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 event.preventDefault();
                 const itemName = event.target.dataset.itemName;
                 if (!itemName) { alert('Could not determine which item to buy.'); return; }
-                shopMessageDisplay.innerHTML = '';
-                barterUIDisplay.innerHTML = '';
+                shopMessageDisplay.innerHTML = ''; barterUIDisplay.innerHTML = '';
                 try {
                     const response = await fetch('/api/player/buyitem', {
                         method: 'POST',
@@ -241,18 +220,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         } catch (e) { try { errorMsg = await response.text(); if (!errorMsg) errorMsg = `Error: ${response.statusText}`; } catch (textError) { errorMsg = `Error: ${response.statusText}`; } }
                         alert(`Could not buy item: ${errorMsg}`);
                     }
-                } catch (error) {
-                    alert('Failed to send purchase request. See console for details.');
-                }
+                } catch (error) { alert('Failed to send purchase request. See console for details.'); }
             }
         });
     }
 
     if (runShopStandardButton) {
         runShopStandardButton.addEventListener('click', async () => {
-            shopMessageDisplay.innerHTML = '';
-            marketDisplay.innerHTML = '';
-            barterUIDisplay.innerHTML = '';
+            shopMessageDisplay.innerHTML = ''; marketDisplay.innerHTML = ''; barterUIDisplay.innerHTML = '';
             try {
                 const response = await fetch('/api/player/runshopstandard', { method: 'POST' });
                 const responseData = await response.json();
@@ -264,17 +239,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     shopMessageDisplay.innerHTML = `<p style="color: red;">${errorMessage}</p>`;
                     if (responseData.updatedPlayer) displayCharacter(responseData.updatedPlayer);
                 }
-            } catch (error) {
-                shopMessageDisplay.innerHTML = '<p style="color: red;">Failed to run shop. See console for details.</p>';
-            }
+            } catch (error) { shopMessageDisplay.innerHTML = '<p style="color: red;">Failed to run shop. See console for details.</p>'; }
         });
     }
 
     if (longRestButton) {
         longRestButton.addEventListener('click', async () => {
-            shopMessageDisplay.innerHTML = '';
-            marketDisplay.innerHTML = '';
-            barterUIDisplay.innerHTML = '';
+            shopMessageDisplay.innerHTML = ''; marketDisplay.innerHTML = ''; barterUIDisplay.innerHTML = '';
             try {
                 const response = await fetch('/api/player/longrest', { method: 'POST' });
                 if (response.ok) {
@@ -282,25 +253,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     displayCharacter(updatedPlayer);
                     shopMessageDisplay.textContent = "You feel rested and rejuvenated.";
                 } else {
-                    const errorText = await response.text();
-                    alert(`Could not take long rest: ${errorText || response.statusText}`);
+                    const errorText = await response.text(); alert(`Could not take long rest: ${errorText || response.statusText}`);
                 }
-            } catch (error) {
-                alert('Failed to send request for long rest. See console for details.');
-            }
+            } catch (error) { alert('Failed to send request for long rest. See console for details.'); }
         });
     }
 
     if (runShopBarterButton) {
         runShopBarterButton.addEventListener('click', async () => {
-            shopMessageDisplay.innerHTML = '';
-            marketDisplay.innerHTML = '';
-            barterUIDisplay.innerHTML = '';
-
+            shopMessageDisplay.innerHTML = ''; marketDisplay.innerHTML = ''; barterUIDisplay.innerHTML = '';
             try {
                 const response = await fetch('/api/player/barter/initiate', { method: 'POST' });
                 const initiateData = await response.json();
-
                 if (response.ok) {
                     console.log('Barter initiated:', initiateData);
                     if (initiateData.itemName == null) {
@@ -330,25 +294,56 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Event delegation for Barter UI buttons
     if (barterUIDisplay) {
         barterUIDisplay.addEventListener('click', async (event) => {
             const targetId = event.target.id;
-            if (targetId === 'barterAcceptButton') {
-                handleBarterAction('accept');
-            } else if (targetId === 'barterDenyButton') {
-                handleBarterAction('deny');
-            } else if (targetId === 'barterSubmitCounterButton') {
+            if (targetId === 'barterAcceptButton') { handleBarterAction('accept'); }
+            else if (targetId === 'barterDenyButton') { handleBarterAction('deny'); }
+            else if (targetId === 'barterSubmitCounterButton') {
                 const counterInput = document.getElementById('barterCounterAmountInput');
-                if (counterInput) {
-                    handleBarterAction('counter', counterInput.value);
-                } else {
-                    console.error('#barterCounterAmountInput not found.');
-                    barterUIDisplay.innerHTML = '<p style="color: red;">Error: Counter input field missing.</p>';
-                }
+                if (counterInput) { handleBarterAction('counter', counterInput.value); }
+                else { barterUIDisplay.innerHTML = '<p style="color: red;">Error: Counter input field missing.</p>'; }
             }
         });
-    } else {
-        console.error('#barterUIDisplay not found for event delegation.');
+    }
+
+    // Event listener for Test Damage Button
+    if (testDamageButton) {
+        testDamageButton.addEventListener('click', async () => {
+            shopMessageDisplay.innerHTML = ''; barterUIDisplay.innerHTML = ''; marketDisplay.innerHTML = '';
+            try {
+                const response = await fetch('/api/player/testdamage', { method: 'POST' });
+                if (response.ok) {
+                    const updatedPlayer = await response.json();
+                    displayCharacter(updatedPlayer);
+                } else {
+                    console.error('Error testing damage:', response.status, await response.text());
+                    alert('Failed to apply damage.');
+                }
+            } catch (error) {
+                console.error('Network error testing damage:', error);
+                alert('Network error, could not apply damage.');
+            }
+        });
+    }
+
+    // Event listener for Test Heal Button
+    if (testHealButton) {
+        testHealButton.addEventListener('click', async () => {
+            shopMessageDisplay.innerHTML = ''; barterUIDisplay.innerHTML = ''; marketDisplay.innerHTML = '';
+            try {
+                const response = await fetch('/api/player/testheal', { method: 'POST' });
+                if (response.ok) {
+                    const updatedPlayer = await response.json();
+                    displayCharacter(updatedPlayer);
+                } else {
+                    console.error('Error testing heal:', response.status, await response.text());
+                    alert('Failed to apply heal.');
+                }
+            } catch (error) {
+                console.error('Network error testing heal:', error);
+                alert('Network error, could not apply heal.');
+            }
+        });
     }
 });

@@ -80,6 +80,25 @@ namespace ShopkeeperRPG.Controllers
             }
         }
 
+        public static int GetAbilityModifier(int score)
+        {
+            return (score - 10) / 2;
+        }
+
+        private static bool PerformSkillCheck(Player player, Skill skill, int dc)
+        {
+            if (player == null || player.Skills == null)
+            {
+                Console.WriteLine("Error: Player or Player.Skills is null in PerformSkillCheck.");
+                return false;
+            }
+            int roll = _random.Next(1, 21);
+            int modifier = player.Skills.GetModifier(skill);
+            int total = roll + modifier;
+            Console.WriteLine($"Skill Check - Skill: {skill}, Roll(1d20): {roll}, Modifier: {modifier}, Total: {total} vs DC: {dc}");
+            return total >= dc;
+        }
+
         // Request/Response models
         public record CreatePlayerRequest(string Name);
         public record BuyItemRequest(string ItemName);
@@ -96,7 +115,17 @@ namespace ShopkeeperRPG.Controllers
                 return BadRequest("Player name cannot be empty.");
             if (_players.Any(p => p.Name.Equals(request.Name, StringComparison.OrdinalIgnoreCase)))
                 return Conflict($"Player with name '{request.Name}' already exists.");
-            var newPlayer = new Player { Name = request.Name, Strength = _random.Next(3, 19), Dexterity = _random.Next(3, 19), Constitution = _random.Next(3, 19), Intelligence = _random.Next(3, 19), Wisdom = _random.Next(3, 19), Charisma = _random.Next(3, 19), Gold = 50 };
+
+            int strength = _random.Next(3, 19);
+            int dexterity = _random.Next(3, 19);
+            int constitution = _random.Next(3, 19);
+            int intelligence = _random.Next(3, 19);
+            int wisdom = _random.Next(3, 19);
+            int charisma = _random.Next(3, 19);
+            int initialGold = 50;
+
+            var newPlayer = new Player(request.Name, strength, dexterity, constitution, intelligence, wisdom, charisma, initialGold);
+
             _players.Add(newPlayer);
             return Ok(newPlayer);
         }
@@ -141,18 +170,35 @@ namespace ShopkeeperRPG.Controllers
         {
             var player = _players.FirstOrDefault();
             if (player == null) return NotFound(new RunShopStandardResponse("Player not found. Please create a player first.", null));
+
+            string message;
+
             if (player.Inventory == null || !player.Inventory.Any())
             {
-                AdvancePlayerTime(player, 2);
-                return Ok(new RunShopStandardResponse("Your inventory is empty! Nothing to sell.", player));
+                message = "Your inventory is empty! Nothing to sell.";
             }
-            int itemIndex = _random.Next(player.Inventory.Count);
-            Item itemToSell = player.Inventory[itemIndex];
-            int salePrice = itemToSell.Price;
-            player.Gold += salePrice;
-            player.Inventory.RemoveAt(itemIndex);
+            else
+            {
+                int itemIndex = _random.Next(player.Inventory.Count);
+                Item itemToSell = player.Inventory[itemIndex];
+
+                int persuasionDC = 12;
+                bool persuasionSuccess = PerformSkillCheck(player, Skill.Persuasion, persuasionDC);
+
+                if (persuasionSuccess)
+                {
+                    int salePrice = itemToSell.Price;
+                    player.Gold += salePrice;
+                    player.Inventory.RemoveAt(itemIndex);
+                    message = $"Successfully persuaded the customer! Sold {itemToSell.Name} for {salePrice} gold. (Persuasion DC {persuasionDC} met)";
+                }
+                else
+                {
+                    message = $"The customer wasn't convinced by your sales pitch for {itemToSell.Name}. No sale. (Persuasion DC {persuasionDC} failed)";
+                }
+            }
+
             AdvancePlayerTime(player, 2);
-            string message = $"Sold {itemToSell.Name} for {salePrice} gold.";
             return Ok(new RunShopStandardResponse(message, player));
         }
 
@@ -164,7 +210,8 @@ namespace ShopkeeperRPG.Controllers
             player.TookLongRestToday = true;
             AdvancePlayerTime(player, 8);
             player.ExhaustionLevel = 0;
-            // TODO: Implement HP and Hit Dice recovery
+            player.CurrentHP = player.MaxHP;
+            // TODO: Implement Hit Dice recovery as per D&D long rest rules.
             return Ok(player);
         }
 
@@ -196,8 +243,8 @@ namespace ShopkeeperRPG.Controllers
 
             _activeBarterSession = new BarterSession(player.Name, itemNpcWants, npcInitialOffer, minNpcAcceptPrice, maxNpcOfferPrice)
             {
-                PlayerId = player.Name, // Explicitly set required property
-                ItemNpcWants = itemNpcWants // Explicitly set required property
+                PlayerId = player.Name,
+                ItemNpcWants = itemNpcWants
             };
 
             AdvancePlayerTime(player, 1);
@@ -241,7 +288,6 @@ namespace ShopkeeperRPG.Controllers
 
                     _activeBarterSession.PlayerCounterOffer = request.CounterAmount.Value;
 
-                    // NPC Decision Logic (Simplified)
                     if (request.CounterAmount.Value >= _activeBarterSession.MinNpcAcceptPrice &&
                         request.CounterAmount.Value <= _activeBarterSession.MaxNpcOfferPrice * 1.1)
                     {
@@ -264,6 +310,30 @@ namespace ShopkeeperRPG.Controllers
                 default:
                     return BadRequest(new BarterActionResponse("Invalid action.", player, false, "error_invalid_action", null));
             }
+        }
+
+        [HttpPost("testdamage")]
+        public IActionResult TestDamage()
+        {
+            var player = _players.FirstOrDefault();
+            if (player == null)
+            {
+                return NotFound("Player not found.");
+            }
+            player.CurrentHP = Math.Max(0, player.CurrentHP - 3);
+            return Ok(player);
+        }
+
+        [HttpPost("testheal")]
+        public IActionResult TestHeal()
+        {
+            var player = _players.FirstOrDefault();
+            if (player == null)
+            {
+                return NotFound("Player not found.");
+            }
+            player.CurrentHP = Math.Min(player.MaxHP, player.CurrentHP + 3);
+            return Ok(player);
         }
     }
 }
