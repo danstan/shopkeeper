@@ -92,10 +92,24 @@ namespace ShopkeeperRPG.Controllers
                 Console.WriteLine("Error: Player or Player.Skills is null in PerformSkillCheck.");
                 return false;
             }
-            int roll = _random.Next(1, 21);
+
+            int roll;
+            if (player.ExhaustionLevel >= 1)
+            {
+                int roll1 = _random.Next(1, 21);
+                int roll2 = _random.Next(1, 21);
+                roll = Math.Min(roll1, roll2);
+            }
+            else
+            {
+                roll = _random.Next(1, 21);
+            }
+
             int modifier = player.Skills.GetModifier(skill);
             int total = roll + modifier;
+
             Console.WriteLine($"Skill Check - Skill: {skill}, Roll(1d20): {roll}, Modifier: {modifier}, Total: {total} vs DC: {dc}");
+
             return total >= dc;
         }
 
@@ -126,20 +140,21 @@ namespace ShopkeeperRPG.Controllers
 
             var newPlayer = new Player(request.Name, strength, dexterity, constitution, intelligence, wisdom, charisma, initialGold);
 
+            // Grant starter items
+            var healingPotionDetails = _predefinedItems.FirstOrDefault(item => item.Name == "Healing Potion");
+            if (healingPotionDetails != null)
+            {
+                newPlayer.Inventory.Add(new Item { Name = healingPotionDetails.Name, Description = healingPotionDetails.Description, Price = healingPotionDetails.Price });
+            }
+
+            var ironDaggerDetails = _predefinedItems.FirstOrDefault(item => item.Name == "Iron Dagger");
+            if (ironDaggerDetails != null)
+            {
+                newPlayer.Inventory.Add(new Item { Name = ironDaggerDetails.Name, Description = ironDaggerDetails.Description, Price = ironDaggerDetails.Price });
+            }
+
             _players.Add(newPlayer);
             return Ok(newPlayer);
-        }
-
-        [HttpPost("getstarteritem")]
-        public IActionResult GetStarterItem()
-        {
-            var player = _players.FirstOrDefault();
-            if (player == null) return NotFound("No player created yet. Please create a player first.");
-            if (!_predefinedItems.Any()) return NotFound("No predefined items available to give.");
-            var itemToAddDetails = _predefinedItems.First();
-            player.Inventory.Add(new Item { Name = itemToAddDetails.Name, Description = itemToAddDetails.Description, Price = itemToAddDetails.Price });
-            AdvancePlayerTime(player, 0);
-            return Ok(player);
         }
 
         [HttpGet("marketitems")]
@@ -321,6 +336,14 @@ namespace ShopkeeperRPG.Controllers
                 return NotFound("Player not found.");
             }
             player.CurrentHP = Math.Max(0, player.CurrentHP - 3);
+            if (player.CurrentHP <= 0)
+            {
+                player.CurrentHP = 1; // Recover with 1 HP
+                player.ExhaustionLevel = Math.Min(player.ExhaustionLevel + 1, 6); // Add 1 exhaustion, cap at 6
+                AdvancePlayerTime(player, 4); // Lose 4 hours
+                string defeatMessage = $"{player.Name} passed out from the damage! After some time, you wake up groggy (Day: {player.CurrentDay}, Hour: {player.CurrentHour}, Exhaustion: {player.ExhaustionLevel}).";
+                Console.WriteLine(defeatMessage); // Log to server console for now
+            }
             return Ok(player);
         }
 

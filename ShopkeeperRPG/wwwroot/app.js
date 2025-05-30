@@ -1,13 +1,13 @@
 document.addEventListener('DOMContentLoaded', () => {
     const playerNameInput = document.getElementById('playerNameInput');
     const createCharacterButton = document.getElementById('createCharacterButton');
-    const getStarterItemButton = document.getElementById('getStarterItemButton');
+    // const getStarterItemButton = document.getElementById('getStarterItemButton'); // Removed
     const visitMarketButton = document.getElementById('visitMarketButton');
     const runShopStandardButton = document.getElementById('runShopStandardButton');
     const longRestButton = document.getElementById('longRestButton');
     const runShopBarterButton = document.getElementById('runShopBarterButton');
-    const testDamageButton = document.getElementById('testDamageButton'); // New button
-    const testHealButton = document.getElementById('testHealButton');   // New button
+    const testDamageButton = document.getElementById('testDamageButton');
+    const testHealButton = document.getElementById('testHealButton');
     const characterDisplay = document.getElementById('characterDisplay');
     const marketDisplay = document.getElementById('marketDisplay');
     const shopMessageDisplay = document.getElementById('shopMessageDisplay');
@@ -21,7 +21,11 @@ document.addEventListener('DOMContentLoaded', () => {
         characterDisplay.appendChild(nameElement);
 
         const hpElement = document.createElement('p');
-        hpElement.textContent = `HP: ${character.currentHP} / ${character.maxHP}`;
+        let hpString = `HP: ${character.currentHP} / ${character.maxHP}`;
+        if (character.currentHP === 1 && character.exhaustionLevel > 0 && character.currentHour !== 8) {
+            hpString += ' <span style="color: red;">(Barely Conscious!)</span>';
+        }
+        hpElement.innerHTML = hpString;
         characterDisplay.appendChild(hpElement);
 
         const strengthElement = document.createElement('p');
@@ -60,29 +64,36 @@ document.addEventListener('DOMContentLoaded', () => {
         const hourElement = document.createElement('p');
         hourElement.textContent = `Hour: ${character.currentHour}`;
         characterDisplay.appendChild(hourElement);
+
         const exhaustionElement = document.createElement('p');
         exhaustionElement.textContent = `Exhaustion: ${character.exhaustionLevel}`;
         characterDisplay.appendChild(exhaustionElement);
+
+        if (character.exhaustionLevel >= 1) {
+            const exhaustionEffectElement = document.createElement('p');
+            exhaustionEffectElement.innerHTML = '<span style="color: orange;">(Disadvantage on Skill Checks)</span>';
+            characterDisplay.appendChild(exhaustionEffectElement);
+        }
     }
 
     function disableActionButtons() {
-        if(getStarterItemButton) getStarterItemButton.disabled = true;
+        // if(getStarterItemButton) getStarterItemButton.disabled = true; // Removed
         if(visitMarketButton) visitMarketButton.disabled = true;
         if(runShopStandardButton) runShopStandardButton.disabled = true;
         if(longRestButton) longRestButton.disabled = true;
         if(runShopBarterButton) runShopBarterButton.disabled = true;
-        if(testDamageButton) testDamageButton.disabled = true; // Add test button
-        if(testHealButton) testHealButton.disabled = true;   // Add test button
+        if(testDamageButton) testDamageButton.disabled = true;
+        if(testHealButton) testHealButton.disabled = true;
     }
 
     function enableActionButtons() {
-        if(getStarterItemButton) getStarterItemButton.disabled = false;
+        // if(getStarterItemButton) getStarterItemButton.disabled = false; // Removed
         if(visitMarketButton) visitMarketButton.disabled = false;
         if(runShopStandardButton) runShopStandardButton.disabled = false;
         if(longRestButton) longRestButton.disabled = false;
         if(runShopBarterButton) runShopBarterButton.disabled = false;
-        if(testDamageButton) testDamageButton.disabled = false; // Add test button
-        if(testHealButton) testHealButton.disabled = false;   // Add test button
+        if(testDamageButton) testDamageButton.disabled = false;
+        if(testHealButton) testHealButton.disabled = false;
     }
 
     disableActionButtons();
@@ -152,20 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    if (getStarterItemButton) {
-        getStarterItemButton.addEventListener('click', async () => {
-            shopMessageDisplay.innerHTML = ''; barterUIDisplay.innerHTML = '';
-            try {
-                const response = await fetch('/api/player/getstarteritem', { method: 'POST' });
-                if (response.ok) {
-                    const updatedPlayer = await response.json();
-                    displayCharacter(updatedPlayer);
-                } else {
-                    const errorText = await response.text(); alert(`Could not get starter item: ${errorText || response.statusText}`);
-                }
-            } catch (error) { alert('Failed to send request for starter item. See console for details.'); }
-        });
-    }
+    // Removed GetStarterItemButton related code block
 
     if (visitMarketButton) {
         visitMarketButton.addEventListener('click', async () => {
@@ -307,7 +305,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Event listener for Test Damage Button
     if (testDamageButton) {
         testDamageButton.addEventListener('click', async () => {
             shopMessageDisplay.innerHTML = ''; barterUIDisplay.innerHTML = ''; marketDisplay.innerHTML = '';
@@ -327,7 +324,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Event listener for Test Heal Button
     if (testHealButton) {
         testHealButton.addEventListener('click', async () => {
             shopMessageDisplay.innerHTML = ''; barterUIDisplay.innerHTML = ''; marketDisplay.innerHTML = '';
