@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis; // Added using statement
 // using ShopkeeperRPG.Controllers; // Not strictly needed if using fully qualified name
 
 namespace ShopkeeperRPG.Models
@@ -22,7 +23,7 @@ namespace ShopkeeperRPG.Models
         public int CurrentHP { get; set; }
         public SkillSet Skills { get; private set; }
 
-        // New parameterized constructor
+        [SetsRequiredMembers] // Added attribute
         public Player(string name, int strength, int dexterity, int constitution, int intelligence, int wisdom, int charisma, int initialGold)
         {
             this.Name = name;
