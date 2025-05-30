@@ -3,17 +3,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const createCharacterButton = document.getElementById('createCharacterButton');
     const getStarterItemButton = document.getElementById('getStarterItemButton');
     const visitMarketButton = document.getElementById('visitMarketButton');
-    const runShopStandardButton = document.getElementById('runShopStandardButton'); 
-    const longRestButton = document.getElementById('longRestButton'); 
-    const runShopBarterButton = document.getElementById('runShopBarterButton'); 
+    const runShopStandardButton = document.getElementById('runShopStandardButton');
+    const longRestButton = document.getElementById('longRestButton');
+    const runShopBarterButton = document.getElementById('runShopBarterButton');
     const characterDisplay = document.getElementById('characterDisplay');
     const marketDisplay = document.getElementById('marketDisplay');
-    const shopMessageDisplay = document.getElementById('shopMessageDisplay'); 
-    const barterUIDisplay = document.getElementById('barterUIDisplay'); 
+    const shopMessageDisplay = document.getElementById('shopMessageDisplay');
+    const barterUIDisplay = document.getElementById('barterUIDisplay');
 
     // Helper function to display character details
     function displayCharacter(character) {
-        characterDisplay.innerHTML = ''; 
+        characterDisplay.innerHTML = '';
         const nameElement = document.createElement('p');
         nameElement.textContent = `Name: ${character.name}`;
         characterDisplay.appendChild(nameElement);
@@ -62,19 +62,19 @@ document.addEventListener('DOMContentLoaded', () => {
         if(getStarterItemButton) getStarterItemButton.disabled = true;
         if(visitMarketButton) visitMarketButton.disabled = true;
         if(runShopStandardButton) runShopStandardButton.disabled = true;
-        if(longRestButton) longRestButton.disabled = true; 
-        if(runShopBarterButton) runShopBarterButton.disabled = true; 
+        if(longRestButton) longRestButton.disabled = true;
+        if(runShopBarterButton) runShopBarterButton.disabled = true;
     }
 
     function enableActionButtons() {
         if(getStarterItemButton) getStarterItemButton.disabled = false;
         if(visitMarketButton) visitMarketButton.disabled = false;
         if(runShopStandardButton) runShopStandardButton.disabled = false;
-        if(longRestButton) longRestButton.disabled = false; 
-        if(runShopBarterButton) runShopBarterButton.disabled = false; 
+        if(longRestButton) longRestButton.disabled = false;
+        if(runShopBarterButton) runShopBarterButton.disabled = false;
     }
-    
-    disableActionButtons(); 
+
+    disableActionButtons();
 
     // --- Barter Action Handler ---
     async function handleBarterAction(action, counterAmount = null) {
@@ -96,12 +96,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify(requestBody)
             });
 
-            const responseData = await response.json(); 
+            const responseData = await response.json();
 
             if (response.ok) {
-                barterUIDisplay.innerHTML = `<p>${responseData.message}</p>`; 
+                barterUIDisplay.innerHTML = `<p>${responseData.message}</p>`;
                 if (responseData.updatedPlayer) {
-                    displayCharacter(responseData.updatedPlayer); 
+                    displayCharacter(responseData.updatedPlayer);
                 }
                 // If barterEnded is true (which it is in the current backend logic for all responses),
                 // the barter UI is effectively cleared by displaying the message.
@@ -128,9 +128,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert('Please enter a character name.');
                 return;
             }
-            shopMessageDisplay.innerHTML = ''; 
-            marketDisplay.innerHTML = ''; 
-            barterUIDisplay.innerHTML = ''; 
+            shopMessageDisplay.innerHTML = '';
+            marketDisplay.innerHTML = '';
+            barterUIDisplay.innerHTML = '';
             try {
                 const response = await fetch('/api/player/create', {
                     method: 'POST',
@@ -164,7 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (getStarterItemButton) {
         getStarterItemButton.addEventListener('click', async () => {
-            shopMessageDisplay.innerHTML = ''; 
+            shopMessageDisplay.innerHTML = '';
             barterUIDisplay.innerHTML = '';
             try {
                 const response = await fetch('/api/player/getstarteritem', { method: 'POST' });
@@ -183,13 +183,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (visitMarketButton) {
         visitMarketButton.addEventListener('click', async () => {
-            shopMessageDisplay.innerHTML = ''; 
+            shopMessageDisplay.innerHTML = '';
             barterUIDisplay.innerHTML = '';
             try {
                 const response = await fetch('/api/player/marketitems');
                 if (response.ok) {
                     const marketItems = await response.json();
-                    marketDisplay.innerHTML = ''; 
+                    marketDisplay.innerHTML = '';
                     const marketHeading = document.createElement('h3');
                     marketHeading.textContent = 'Market';
                     marketDisplay.appendChild(marketHeading);
@@ -219,10 +219,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (marketDisplay) {
         marketDisplay.addEventListener('click', async (event) => {
             if (event.target.classList.contains('buyButton')) {
-                event.preventDefault(); 
+                event.preventDefault();
                 const itemName = event.target.dataset.itemName;
                 if (!itemName) { alert('Could not determine which item to buy.'); return; }
-                shopMessageDisplay.innerHTML = ''; 
+                shopMessageDisplay.innerHTML = '';
                 barterUIDisplay.innerHTML = '';
                 try {
                     const response = await fetch('/api/player/buyitem', {
@@ -250,12 +250,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (runShopStandardButton) {
         runShopStandardButton.addEventListener('click', async () => {
-            shopMessageDisplay.innerHTML = ''; 
-            marketDisplay.innerHTML = ''; 
+            shopMessageDisplay.innerHTML = '';
+            marketDisplay.innerHTML = '';
             barterUIDisplay.innerHTML = '';
             try {
                 const response = await fetch('/api/player/runshopstandard', { method: 'POST' });
-                const responseData = await response.json(); 
+                const responseData = await response.json();
                 if (response.ok) {
                     shopMessageDisplay.textContent = responseData.message;
                     if (responseData.updatedPlayer) displayCharacter(responseData.updatedPlayer);
@@ -272,15 +272,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (longRestButton) {
         longRestButton.addEventListener('click', async () => {
-            shopMessageDisplay.innerHTML = ''; 
-            marketDisplay.innerHTML = '';    
+            shopMessageDisplay.innerHTML = '';
+            marketDisplay.innerHTML = '';
             barterUIDisplay.innerHTML = '';
             try {
                 const response = await fetch('/api/player/longrest', { method: 'POST' });
                 if (response.ok) {
                     const updatedPlayer = await response.json();
                     displayCharacter(updatedPlayer);
-                    shopMessageDisplay.textContent = "You feel rested and rejuvenated."; 
+                    shopMessageDisplay.textContent = "You feel rested and rejuvenated.";
                 } else {
                     const errorText = await response.text();
                     alert(`Could not take long rest: ${errorText || response.statusText}`);
@@ -293,20 +293,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (runShopBarterButton) {
         runShopBarterButton.addEventListener('click', async () => {
-            shopMessageDisplay.innerHTML = ''; 
-            marketDisplay.innerHTML = '';    
-            barterUIDisplay.innerHTML = '';   
+            shopMessageDisplay.innerHTML = '';
+            marketDisplay.innerHTML = '';
+            barterUIDisplay.innerHTML = '';
 
             try {
                 const response = await fetch('/api/player/barter/initiate', { method: 'POST' });
-                const initiateData = await response.json(); 
+                const initiateData = await response.json();
 
                 if (response.ok) {
                     console.log('Barter initiated:', initiateData);
-                    if (initiateData.itemName == null) { 
+                    if (initiateData.itemName == null) {
                         barterUIDisplay.innerHTML = `<p>${initiateData.message}</p>`;
                         if (initiateData.updatedPlayer) { displayCharacter(initiateData.updatedPlayer); }
-                        return; 
+                        return;
                     }
                     const heading = document.createElement('h4'); heading.textContent = initiateData.message; barterUIDisplay.appendChild(heading);
                     const itemDetails = document.createElement('p'); itemDetails.textContent = `Item: ${initiateData.itemName} (${initiateData.itemDescription})`; barterUIDisplay.appendChild(itemDetails);
